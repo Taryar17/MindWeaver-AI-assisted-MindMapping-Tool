@@ -9,14 +9,27 @@ import { toast } from "sonner";
 import { NoteGenerationModal } from "../util/NoteGenerationModal";
 
 function CanvaNav() {
-  const { mindMapTitle, setMindMapTitle, saveMindMap, mindMapId } = useStore(
-    (state) => ({
-      mindMapTitle: state.mindMapTitle,
-      setMindMapTitle: state.setMindMapTitle,
-      saveMindMap: state.saveMindMap,
-      mindMapId: state.mindMapId,
-    }),
-  );
+  const {
+    mindMapTitle,
+    setMindMapTitle,
+    saveMindMap,
+    mindMapId,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    exportMindmap,
+  } = useStore((state) => ({
+    mindMapTitle: state.mindMapTitle,
+    setMindMapTitle: state.setMindMapTitle,
+    saveMindMap: state.saveMindMap,
+    mindMapId: state.mindMapId,
+    undo: state.undo,
+    redo: state.redo,
+    canUndo: state.canUndo,
+    canRedo: state.canRedo,
+    exportMindmap: state.exportMindmap,
+  }));
 
   const { profile, loadProfile } = useUserStore();
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -72,6 +85,19 @@ function CanvaNav() {
     return null;
   };
 
+  const handleExport = async () => {
+    try {
+      const filename = `${mindMapTitle || "mindmap"}_${Date.now()}`;
+
+      await exportMindmap("png", filename);
+
+      toast.success("Mindmap exported!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Export failed");
+    }
+  };
+
   return (
     <div className="w-full h-20 flex items-center justify-between px-6 border-b border-border bg-background">
       <div className="flex items-center gap-4 min-w-0 shrink">
@@ -113,6 +139,32 @@ function CanvaNav() {
       </div>
 
       <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className={`flex items-center justify-center p-2 rounded-md transition-colors ${
+              canUndo
+                ? "text-foreground hover:bg-muted"
+                : "text-muted-foreground/50 cursor-not-allowed"
+            }`}
+            title="Undo (Ctrl+Z)"
+          >
+            <Icons.Undo size={16} />
+          </button>
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className={`flex items-center justify-center p-2 rounded-md transition-colors ${
+              canRedo
+                ? "text-foreground hover:bg-muted"
+                : "text-muted-foreground/50 cursor-not-allowed"
+            }`}
+            title="Redo (Ctrl+Y)"
+          >
+            <Icons.Redo size={16} />
+          </button>
+        </div>
         <div className="h-6 w-px bg-border" />
         <button
           onClick={() => setShowNoteModal(true)}
@@ -130,7 +182,10 @@ function CanvaNav() {
           {isSaving ? "Saving..." : "Save"}
         </button>
 
-        <button className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-2 py-1.5 rounded-md transition-colors text-sm whitespace-nowrap">
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-2 py-1.5 rounded-md transition-colors text-sm whitespace-nowrap"
+        >
           <Upload size={14} />
           Export
         </button>
@@ -142,7 +197,7 @@ function CanvaNav() {
         <div className="h-6 w-px bg-border" />
       </div>
 
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center gap-3 shrink-0">
         <ModeToggle />
         <div className="h-6 w-px bg-border" />
 
@@ -159,7 +214,7 @@ function CanvaNav() {
             <img
               src={getAvatarUrl()!}
               alt={getDisplayName()}
-              className="h-9 w-9 rounded-full object-cover flex-shrink-0"
+              className="h-9 w-9 rounded-full object-cover shrink-0"
             />
           ) : (
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-sm font-semibold text-primary-foreground flex-shrink-0">

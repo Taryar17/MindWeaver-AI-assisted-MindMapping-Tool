@@ -28,18 +28,18 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
 
   useEffect(() => {
     if (isEditing) {
-      if (data.isSummary && textareaRef.current) {
+      if (data.nodeType === "SUMMARY" && textareaRef.current) {
         textareaRef.current.focus({ preventScroll: true });
       } else if (inputRef.current) {
         inputRef.current.focus({ preventScroll: true });
       }
     }
-  }, [isEditing, data.isSummary]);
+  }, [isEditing, data.nodeType]);
 
   const textColor = getTextColor(data.color);
 
   // For summary nodes, use textarea for multiline content
-  if (data.isSummary) {
+  if (data.nodeType === "SUMMARY") {
     return (
       <>
         <div
@@ -86,7 +86,7 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
             />
           ) : (
             <p
-              className="whitespace-pre-wrap break-words"
+              className="whitespace-pre-wrap wrap-break-words"
               style={{
                 color: textColor,
                 fontSize: "14px",
@@ -107,17 +107,16 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
           )}
         </div>
 
-        {/* Only show handles if not a summary node (or you can keep them) */}
         <Handle
           type="target"
           position={Position.Top}
-          className="!w-3 !h-3 !bg-primary !border-2 !border-background hover:!scale-125 transition-transform"
+          className="w-3! h-3! bg-primary! border-2! border-background! hover:scale-125! transition-transform"
         />
       </>
     );
   }
 
-  // Regular node (existing code)
+  // Regular node
   return (
     <>
       <div
@@ -171,13 +170,13 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-3 !h-3 !bg-primary !border-2 !border-background hover:!scale-125 transition-transform"
+        className="w-3! h-3! bg-primary! border-2! border-background! hover:scale-125! transition-transform"
       />
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-3 !h-3 !bg-primary !border-2 !border-background hover:!scale-125 transition-transform"
+        className="w-3! h-3! bg-primary! border-2! border-background! hover:scale-125! transition-transform"
       />
     </>
   );

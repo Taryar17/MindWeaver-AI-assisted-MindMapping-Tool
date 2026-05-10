@@ -39,6 +39,7 @@ import {
   NetworkIcon,
   PaperclipIcon,
   PhoneIcon,
+  RedoIcon,
   RefreshCwIcon,
   ShareIcon,
   ShieldIcon,
@@ -49,6 +50,7 @@ import {
   TrashIcon,
   TrendingUpIcon,
   TruckIcon,
+  UndoIcon,
   UploadIcon,
   UsersIcon,
   WorkflowIcon,
@@ -57,6 +59,8 @@ import {
 export type IconProps = React.HTMLAttributes<SVGElement>;
 
 export const Icons = {
+  Undo: UndoIcon,
+  Redo: RedoIcon,
   sparkles: SparkleIcon,
   work: WorkflowIcon,
   stack: StackIcon,

@@ -26,12 +26,10 @@ export type RFState = {
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   addChildNode: (parentNode: Node, position: XYPosition) => void;
-  addSiblingNode: (node: Node, position: XYPosition) => void;
   deleteNode: (nodeId: string) => void;
   updateNodeLabel: (nodeId: string, label: string) => void;
   updateNodeColor: (nodeId: string, color: string) => void;
   updateNodeShape: (nodeId: string, shape: "rectangle" | "circle") => void;
-  updateEdgeType: (edgeId: string, edgeType: "straight" | "dotted") => void;
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
   setSelectedNode: (id: string | null) => void;
@@ -47,6 +45,20 @@ export type RFState = {
   loadMindMap: (id: string) => Promise<void>;
   setNodes: (nodes: Node[]) => void;
   resetToNewMindMap: () => void;
+  history: Node[][];
+  historyIndex: number;
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  pushToHistory: (newNodes: Node[], newEdges: Edge[]) => void;
+  setCanUndoRedo: () => void;
+  hasUnsavedChanges: boolean;
+  setHasUnsavedChanges: (hasChanges: boolean) => void;
+  exportMindmap: (
+    format: "png" | "jpeg" | "svg",
+    filename: string,
+  ) => Promise<void>;
 
   // AI Action related functions
   getSurroundingNodes: (nodeId: string) => {
@@ -93,6 +105,8 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
   },
 
   addChildNode: (parentNode: Node, position: XYPosition) => {
+    // Push to history BEFORE making changes
+    get().pushToHistory(get().nodes, get().edges);
     const newNode = {
       id: nanoid(),
       type: "mindmap",
@@ -118,51 +132,23 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
     setTimeout(() => {
       get().setSelectedNode(newNode.id);
     }, 100);
+    set({ hasUnsavedChanges: true });
   },
-
-  addSiblingNode: (node: Node, position: XYPosition) => {
-    if (node.parentId) {
-      const parentNode = get().nodes.find((n) => n.id === node.parentId);
-      if (parentNode) {
-        const newNode = {
-          id: nanoid(),
-          type: "mindmap",
-          data: { label: "New Node", color: "#ffffff", shape: "rectangle" },
-          position,
-          parentId: parentNode.id,
-        };
-
-        const newEdge = {
-          id: nanoid(),
-          source: parentNode.id,
-          target: newNode.id,
-          data: {
-            edgeType: "straight",
-          },
-        };
-
-        set({
-          nodes: [...get().nodes, newNode],
-          edges: [...get().edges, newEdge],
-        });
-
-        setTimeout(() => {
-          get().setSelectedNode(newNode.id);
-        }, 100);
-      }
-    }
-  },
-
   deleteEdge: (edgeId: string) => {
+    // Push to history BEFORE making changes
+    get().pushToHistory(get().nodes, get().edges);
     set((state) => ({
       edges: state.edges.filter((edge) => edge.id !== edgeId),
     }));
     if (get().selectedEdgeId === edgeId) {
       get().setSelectedEdge(null);
     }
+    set({ hasUnsavedChanges: true });
   },
 
   deleteNode: (nodeId: string) => {
+    // Push to history BEFORE making changes
+    get().pushToHistory(get().nodes, get().edges);
     // Remove all edges connected to this node
     const edgesToRemove = get().edges.filter(
       (edge) => edge.source === nodeId || edge.target === nodeId,
@@ -190,42 +176,41 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
     if (get().selectedNodeId === nodeId) {
       get().setSelectedNode(null);
     }
+    set({ hasUnsavedChanges: true });
   },
 
   updateNodeLabel: (nodeId: string, label: string) => {
+    // Push to history BEFORE making changes
+    get().pushToHistory(get().nodes, get().edges);
     set((state) => ({
       nodes: state.nodes.map((node) =>
         node.id === nodeId ? { ...node, data: { ...node.data, label } } : node,
       ),
     }));
+    set({ hasUnsavedChanges: true });
   },
 
   updateNodeColor: (nodeId, color) => {
+    // Push to history BEFORE making changes
+    get().pushToHistory(get().nodes, get().edges);
     set((state) => ({
       nodes: state.nodes.map((node) =>
         node.id === nodeId ? { ...node, data: { ...node.data, color } } : node,
       ),
     }));
+    set({ hasUnsavedChanges: true });
   },
 
   updateNodeShape: (nodeId, shape) => {
+    // Push to history BEFORE making changes
+    get().pushToHistory(get().nodes, get().edges);
     set((state) => ({
       nodes: state.nodes.map((node) =>
         node.id === nodeId ? { ...node, data: { ...node.data, shape } } : node,
       ),
     }));
+    set({ hasUnsavedChanges: true });
   },
-
-  updateEdgeType: (edgeId, edgeType) => {
-    set((state) => ({
-      edges: state.edges.map((edge) =>
-        edge.id === edgeId
-          ? { ...edge, data: { ...edge.data, edgeType } }
-          : edge,
-      ),
-    }));
-  },
-
   selectedNodeId: null,
   selectedEdgeId: null,
 
@@ -266,11 +251,11 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
 
   // AI Action: Generate Child Ideas
   generateChildIdeas: async (nodeId: string) => {
-    const { mindMapId, getSurroundingNodes, addChildNode } = get();
+    const { mindMapId, nodes, edges } = get();
     const currentNode = get().nodes.find((n) => n.id === nodeId);
 
-    if (!currentNode || !mindMapId) {
-      console.error("No current node or mind map ID");
+    if (!currentNode) {
+      console.error("No current node");
       return;
     }
 
@@ -280,11 +265,32 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
     try {
       console.log("Generating child ideas...");
 
-      const response = await aiApi.generateAIContent({
-        mindMapId,
-        nodeId,
-        action: "generateChildIdeas",
-      });
+      let response;
+      if (!mindMapId) {
+        // Send current map data directly to AI
+        const mapData = {
+          nodes: nodes.map((n) => ({
+            id: n.id,
+            label: n.data.label,
+            parentId: n.parentId || null,
+          })),
+          edges: edges.map((e) => ({
+            source: e.source,
+            target: e.target,
+          })),
+        };
+        response = await aiApi.generateContentFromData({
+          mapData,
+          nodeId,
+          action: "generateChildIdeas",
+        });
+      } else {
+        response = await aiApi.generateAIContent({
+          mindMapId,
+          nodeId,
+          action: "generateChildIdeas",
+        });
+      }
 
       if (response.result && Array.isArray(response.result)) {
         const ideas = response.result as string[];
@@ -337,11 +343,11 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
 
   // AI Action: Suggest Related Concepts
   suggestRelatedConcepts: async (nodeId: string) => {
-    const { mindMapId, getSurroundingNodes } = get();
+    const { mindMapId, nodes, edges } = get();
     const currentNode = get().nodes.find((n) => n.id === nodeId);
 
-    if (!currentNode || !mindMapId) {
-      console.error("No current node or mind map ID");
+    if (!currentNode) {
+      console.error("No current node");
       return;
     }
 
@@ -351,11 +357,32 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
     try {
       console.log("Suggesting related concepts...");
 
-      const response = await aiApi.generateAIContent({
-        mindMapId,
-        nodeId,
-        action: "suggestRelatedConcepts",
-      });
+      let response;
+      if (!mindMapId) {
+        // Send current map data directly to AI
+        const mapData = {
+          nodes: nodes.map((n) => ({
+            id: n.id,
+            label: n.data.label,
+            parentId: n.parentId || null,
+          })),
+          edges: edges.map((e) => ({
+            source: e.source,
+            target: e.target,
+          })),
+        };
+        response = await aiApi.generateContentFromData({
+          mapData,
+          nodeId,
+          action: "suggestRelatedConcepts",
+        });
+      } else {
+        response = await aiApi.generateAIContent({
+          mindMapId,
+          nodeId,
+          action: "suggestRelatedConcepts",
+        });
+      }
 
       if (response.result && Array.isArray(response.result)) {
         const concepts = response.result as string[];
@@ -415,18 +442,21 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
   },
 
   setEdges: (edges) => {
+    // Push to history BEFORE making changes
+    get().pushToHistory(get().nodes, get().edges);
     set((state) => ({
       edges: typeof edges === "function" ? edges(state.edges) : edges,
     }));
+    set({ hasUnsavedChanges: true });
   },
 
   // AI Action: Expand into Summary
   expandIntoSummary: async (nodeId: string) => {
-    const { mindMapId, updateNodeLabel } = get();
+    const { mindMapId, nodes, edges } = get();
     const currentNode = get().nodes.find((n) => n.id === nodeId);
 
-    if (!currentNode || !mindMapId) {
-      console.error("No current node or mind map ID");
+    if (!currentNode) {
+      console.error("No current node");
       return;
     }
 
@@ -436,11 +466,32 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
     try {
       console.log("Expanding into summary...");
 
-      const response = await aiApi.generateAIContent({
-        mindMapId,
-        nodeId,
-        action: "expandSummary",
-      });
+      let response;
+      if (!mindMapId) {
+        // Send current map data directly to AI
+        const mapData = {
+          nodes: nodes.map((n) => ({
+            id: n.id,
+            label: n.data.label,
+            parentId: n.parentId || null,
+          })),
+          edges: edges.map((e) => ({
+            source: e.source,
+            target: e.target,
+          })),
+        };
+        response = await aiApi.generateContentFromData({
+          mapData,
+          nodeId,
+          action: "expandSummary",
+        });
+      } else {
+        response = await aiApi.generateAIContent({
+          mindMapId,
+          nodeId,
+          action: "expandSummary",
+        });
+      }
 
       if (response.result && typeof response.result === "string") {
         // Create a special summary node with larger dimensions
@@ -458,7 +509,7 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
             color: AI_COLORS.expandSummary,
             shape: "rectangle",
             aiGenerated: true,
-            isSummary: true, // Flag for special rendering
+            nodeType: "SUMMARY",
           },
           position,
           parentId: currentNode.id, // Connect to parent
@@ -533,12 +584,15 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
       }
 
       if (response) {
-        set({ mindMapId: response.id });
+        set({ mindMapId: response.id, hasUnsavedChanges: false });
+
         console.log("Mind map saved successfully!", response);
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     } catch (error) {
       console.error("Failed to save mind map:", error);
-      throw error; // Re-throw so the UI can show the error
+      throw error;
     }
   },
   resetToNewMindMap: () => {
@@ -561,6 +615,7 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
       mindMapDescription: "",
       selectedNodeId: null,
       selectedEdgeId: null,
+      hasUnsavedChanges: false,
     });
   },
 
@@ -574,12 +629,67 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
         mindMapId: mindMap.id,
         mindMapTitle: mindMap.title,
         mindMapDescription: mindMap.description || "",
+        hasUnsavedChanges: false,
       });
     } catch (error) {
       console.error("Failed to load mind map:", error);
     }
   },
   setNodes: (nodes: Node[]) => set({ nodes }),
+  history: [],
+  historyIndex: -1,
+  canUndo: false,
+  canRedo: false,
+
+  setCanUndoRedo: () => {
+    set((state) => ({
+      canUndo: state.historyIndex > 0,
+      canRedo: state.historyIndex < state.history.length - 1,
+    }));
+  },
+
+  pushToHistory: (newNodes: Node[], newEdges: Edge[]) => {
+    set((state) => {
+      const newHistory = state.history.slice(0, state.historyIndex + 1);
+      newHistory.push({ nodes: [...newNodes], edges: [...newEdges] });
+      return {
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
+      };
+    });
+    get().setCanUndoRedo();
+  },
+
+  undo: () => {
+    set((state) => {
+      if (state.historyIndex <= 0) return state;
+      const newIndex = state.historyIndex - 1;
+      const snapshot = state.history[newIndex];
+      return {
+        historyIndex: newIndex,
+        nodes: snapshot.nodes,
+        edges: snapshot.edges,
+      };
+    });
+    get().setCanUndoRedo();
+  },
+
+  redo: () => {
+    set((state) => {
+      if (state.historyIndex >= state.history.length - 1) return state;
+      const newIndex = state.historyIndex + 1;
+      const snapshot = state.history[newIndex];
+      return {
+        historyIndex: newIndex,
+        nodes: snapshot.nodes,
+        edges: snapshot.edges,
+      };
+    });
+    get().setCanUndoRedo();
+  },
+  hasUnsavedChanges: false,
+  setHasUnsavedChanges: (hasChanges) => set({ hasUnsavedChanges: hasChanges }),
+  exportMindmap: async () => {},
 }));
 
 export default useStore;

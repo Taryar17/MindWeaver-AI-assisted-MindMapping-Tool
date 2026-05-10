@@ -48,4 +48,28 @@ export const aiApi = {
       throw error;
     }
   },
+  generateContentFromData: async (data: {
+    mapData: {
+      nodes: Array<{ id: string; label: string; parentId: string | null }>;
+      edges: Array<{ source: string; target: string }>;
+    };
+    nodeId: string;
+    action: "generateChildIdeas" | "suggestRelatedConcepts" | "expandSummary";
+  }) => {
+    try {
+      const response = await api.post<AIResponse>(
+        "/users/ai/generate-from-data",
+        {
+          nodes: data.mapData.nodes,
+          edges: data.mapData.edges,
+          nodeId: data.nodeId,
+          action: data.action,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Failed to generate AI content from data:", error);
+      throw error;
+    }
+  },
 };

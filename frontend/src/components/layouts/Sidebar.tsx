@@ -89,18 +89,30 @@ function Sidebar() {
         )}
 
         <div className="flex justify-around mb-4">
-          <button className="text-muted-foreground hover:text-primary transition-colors">
-            <Link to="/profile">
-              <Icons.user className="h-7 w-7" />
-            </Link>
-          </button>
+          {/* Profile Button */}
+          <div className="relative group">
+            <button className="text-muted-foreground hover:text-primary transition-colors">
+              <Link to="/profile">
+                <Icons.user className="h-7 w-7" />
+              </Link>
+            </button>
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+              Profile
+            </div>
+          </div>
 
-          <button
-            onClick={() => setShowLogoutDialog(true)}
-            className="text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Icons.exit className="h-7 w-7" />
-          </button>
+          {/* Logout Button*/}
+          <div className="relative group">
+            <button
+              onClick={() => setShowLogoutDialog(true)}
+              className="text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Icons.exit className="h-7 w-7" />
+            </button>
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+              Logout
+            </div>
+          </div>
         </div>
 
         <FieldSeparator className="mb-4 border-border" />

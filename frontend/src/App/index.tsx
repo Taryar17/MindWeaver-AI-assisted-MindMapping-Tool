@@ -28,6 +28,9 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import { Move, Plus } from "lucide-react";
 import { nanoid } from "nanoid/non-secure";
 import { AILoadingIndicator } from "@/components/util/AI-Loading-Indicator";
+import { toPng, toJpeg, toSvg } from "html-to-image";
+import { getNodesBounds, getViewportForBounds } from "reactflow";
+import * as htmlToImage from "html-to-image";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,
@@ -36,7 +39,6 @@ const selector = (state: RFState) => ({
   onEdgesChange: state.onEdgesChange,
   setEdges: state.setEdges,
   addChildNode: state.addChildNode,
-  addSiblingNode: state.addSiblingNode,
   deleteNode: state.deleteNode,
   deleteEdge: state.deleteEdge,
   generateChildIdeas: state.generateChildIdeas,
@@ -48,9 +50,12 @@ const selector = (state: RFState) => ({
   setSelectedEdge: state.setSelectedEdge,
   updateNodeColor: state.updateNodeColor,
   updateNodeShape: state.updateNodeShape,
-  updateEdgeType: state.updateEdgeType,
   isGeneratingAI: state.isGeneratingAI,
   aiGenerationType: state.aiGenerationType,
+  undo: state.undo,
+  redo: state.redo,
+  canUndo: state.canUndo,
+  canRedo: state.canRedo,
 });
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
@@ -81,7 +86,6 @@ export function Flow() {
     onEdgesChange,
     setEdges,
     addChildNode,
-    addSiblingNode,
     deleteNode,
     deleteEdge,
     generateChildIdeas,
@@ -91,20 +95,151 @@ export function Flow() {
     selectedNodeId,
     setSelectedEdge,
     setSelectedNode,
-    updateEdgeType,
     updateNodeColor,
     updateNodeShape,
     isGeneratingAI,
     aiGenerationType,
   } = useStore(selector, shallow);
 
-  const { screenToFlowPosition, getZoom } = useReactFlow();
+  const { screenToFlowPosition, getZoom, fitView, getViewport, setViewport } =
+    useReactFlow();
   const [zoom, setZoom] = useState(100);
+
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     nodeId: string;
   } | null>(null);
+
+  const exportMindmap = useCallback(
+    async (format: "png" | "jpeg" | "svg", filename: string) => {
+      const reactFlowEl = document.querySelector(
+        ".react-flow__renderer",
+      ) as HTMLElement;
+
+      if (!reactFlowEl) return;
+
+      // Add temporary class for export styling
+      reactFlowEl.classList.add("exporting");
+
+      /* ===============================
+       1. Save current viewport
+    =============================== */
+      const currentViewport = getViewport();
+
+      /* ===============================
+       2. Fit entire diagram
+    =============================== */
+      await fitView({
+        padding: 0.2,
+        duration: 300,
+      });
+
+      await new Promise((r) => setTimeout(r, 350));
+
+      /* ===============================
+       3. Fix edge visibility - force all SVG paths to have explicit colors
+    =============================== */
+      const allEdges = reactFlowEl.querySelectorAll(".react-flow__edge-path");
+      const originalStrokes: string[] = [];
+
+      allEdges.forEach((edge, index) => {
+        const path = edge as SVGPathElement;
+        originalStrokes[index] = path.getAttribute("stroke") || "";
+        // Force explicit stroke color
+        const isSelected = path
+          .closest(".react-flow__edge")
+          ?.classList.contains("selected");
+        path.setAttribute("stroke", isSelected ? "#06b6d4" : "#94a3b8");
+        path.setAttribute("stroke-width", isSelected ? "3" : "1.5");
+      });
+
+      /* ===============================
+       4. Also ensure all nodes have proper styling
+    =============================== */
+      const allNodes = reactFlowEl.querySelectorAll(".react-flow__node");
+      const originalBackgrounds: string[] = [];
+
+      allNodes.forEach((node, index) => {
+        const div = node as HTMLElement;
+        originalBackgrounds[index] = div.style.backgroundColor;
+        // Ensure background color is explicit
+        if (
+          div.style.backgroundColor === "" ||
+          div.style.backgroundColor === "var(--card)"
+        ) {
+          const computedBg = window.getComputedStyle(div).backgroundColor;
+          if (computedBg !== "rgba(0, 0, 0, 0)") {
+            div.style.backgroundColor = computedBg;
+          }
+        }
+      });
+
+      /* ===============================
+       5. Export with proper background
+    =============================== */
+      const options = {
+        backgroundColor:
+          getComputedStyle(document.body)
+            .getPropertyValue("--background")
+            .trim() || "#ffffff",
+        pixelRatio: 3,
+        cacheBust: true,
+      };
+
+      let dataUrl: string;
+
+      try {
+        if (format === "jpeg") {
+          dataUrl = await toJpeg(reactFlowEl, {
+            ...options,
+            quality: 0.95,
+          });
+        } else if (format === "svg") {
+          dataUrl = await toSvg(reactFlowEl, options);
+        } else {
+          dataUrl = await toPng(reactFlowEl, options);
+        }
+      } finally {
+        // Restore original edge strokes
+        allEdges.forEach((edge, index) => {
+          const path = edge as SVGPathElement;
+          if (originalStrokes[index]) {
+            path.setAttribute("stroke", originalStrokes[index]);
+          } else {
+            path.removeAttribute("stroke");
+          }
+        });
+
+        // Restore original node backgrounds
+        allNodes.forEach((node, index) => {
+          const div = node as HTMLElement;
+          if (originalBackgrounds[index]) {
+            div.style.backgroundColor = originalBackgrounds[index];
+          } else {
+            div.style.backgroundColor = "";
+          }
+        });
+
+        // Remove temporary class
+        reactFlowEl.classList.remove("exporting");
+      }
+
+      /* ===============================
+       6. Restore viewport
+    =============================== */
+      await setViewport(currentViewport, { duration: 0 });
+
+      /* ===============================
+       7. Download
+    =============================== */
+      const link = document.createElement("a");
+      link.download = `${filename}.${format}`;
+      link.href = dataUrl;
+      link.click();
+    },
+    [fitView, getViewport, setViewport],
+  );
 
   // Update zoom display
   const updateZoom = useCallback(() => {
@@ -219,6 +354,40 @@ export function Flow() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [selectedNodeId, selectedEdgeId, deleteNode, deleteEdge]);
+
+  // Add keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleUndoRedo = (event: KeyboardEvent) => {
+      // Check if Cmd (Mac) or Ctrl (Windows) is pressed
+      const isModifierPressed = event.metaKey || event.ctrlKey;
+
+      if (isModifierPressed) {
+        // Undo: Ctrl+Z or Cmd+Z
+        if (event.key === "z" && !event.shiftKey) {
+          event.preventDefault();
+          const { undo } = useStore.getState();
+          undo();
+        }
+        // Redo: Ctrl+Y or Cmd+Y OR Ctrl+Shift+Z
+        else if (event.key === "y" || (event.key === "z" && event.shiftKey)) {
+          event.preventDefault();
+          const { redo } = useStore.getState();
+          redo();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleUndoRedo);
+    return () => {
+      document.removeEventListener("keydown", handleUndoRedo);
+    };
+  }, []);
+
+  useEffect(() => {
+    useStore.setState({
+      exportMindmap,
+    });
+  }, [exportMindmap]);
 
   // Handle node actions
   const handleAddChild = useCallback(() => {
@@ -369,11 +538,11 @@ export function Flow() {
           </div>
         </Panel>
 
-        {(selectedNodeId || selectedEdgeId) && (
+        {selectedNodeId && (
           <Panel position="top-left" className="mt-16 mr-4">
             <div className="bg-card/80 backdrop-blur-sm border border-border rounded-lg shadow-lg p-4 w-64">
               <h3 className="text-sm font-semibold text-foreground mb-3">
-                {selectedNodeId ? "Node Properties" : "Edge Properties"}
+                Node Properties
               </h3>
 
               {selectedNodeId && (
@@ -420,30 +589,6 @@ export function Flow() {
                     </div>
                   </div>
                 </>
-              )}
-
-              {selectedEdgeId && (
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-2">
-                    Line Style
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => updateEdgeType(selectedEdgeId, "straight")}
-                      className="flex-1 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md text-sm flex items-center justify-center gap-2"
-                    >
-                      <div className="w-4 h-0.5 bg-current" />
-                      Straight
-                    </button>
-                    <button
-                      onClick={() => updateEdgeType(selectedEdgeId, "dotted")}
-                      className="flex-1 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md text-sm flex items-center justify-center gap-2"
-                    >
-                      <div className="w-4 h-0.5 bg-current border-t-2 border-dotted" />
-                      Dotted
-                    </button>
-                  </div>
-                </div>
               )}
             </div>
           </Panel>

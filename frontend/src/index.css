@@ -250,3 +250,30 @@ body,
     @apply bg-background text-foreground;
   }
 }
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-contacts-auto-fill-button,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-textfield-decoration-container {
+  display: none;
+}
+
+/* Force edge visibility during export */
+.exporting .react-flow__edge-path {
+  stroke: #94a3b8 !important;
+  stroke-width: 1.5 !important;
+  stroke-opacity: 1 !important;
+}
+
+.exporting .react-flow__edge.selected .react-flow__edge-path {
+  stroke: #06b6d4 !important;
+  stroke-width: 3 !important;
+}
+
+.exporting .react-flow__edge {
+  opacity: 1 !important;
+}
