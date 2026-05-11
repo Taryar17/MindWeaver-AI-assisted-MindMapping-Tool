@@ -43,7 +43,7 @@ export const draftsLoader = async () => {
 export const currentWorkLoader = async () => {
   try {
     const mindMaps = await mindmapApi.getUserMindMaps();
-    // Get the most recent mind map (first in the list since they're ordered by updatedAt desc)
+    // Get the most recent mind map
     const latestMindMap = mindMaps.length > 0 ? mindMaps[0] : null;
     return { latestMindMap };
   } catch (error) {

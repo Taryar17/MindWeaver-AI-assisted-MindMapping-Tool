@@ -149,7 +149,7 @@ export const auth = (req: CustomRequest, res: Response, next: NextFunction) => {
       next();
     } catch (error: any) {
       if (error.name === "TokenExpiredError") {
-        generateNewTokens(); // await generateNewTokens();
+        generateNewTokens();
       } else {
         error.message = "Acess Token is invalid.";
         error.status = 400;

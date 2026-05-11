@@ -83,63 +83,80 @@ export const uploadProfileOptimize = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const userId = req.userId;
-  const image = req.file;
-  const user = await getUserbyId(userId!);
-  checkUserIfNotExist(user);
-  checkUploadFile(image);
+  try {
+    const userId = req.userId;
+    console.log("Uploading avatar for user:", userId);
 
-  const splitFileName = req.file?.filename.split(".")[0];
-
-  const job = await imageQueue.add(
-    "optimize-image",
-    {
-      filePath: req.file?.path,
-      fileName: `${splitFileName}.webp`,
-      width: 200,
-      height: 200,
-      quality: 50,
-    },
-    {
-      attempts: 3,
-      backoff: {
-        type: "exponential",
-        delay: 1000,
-      },
-    },
-  );
-
-  if (user?.avatar) {
-    try {
-      const originalFilePath = path.join(
-        __dirname,
-        "../../../",
-        "uploads/images",
-        user!.avatar!,
-      );
-
-      const optimizedFilePath = path.join(
-        __dirname,
-        "../../../",
-        "uploads/optimized",
-        user!.avatar!.split(".")[0] + ".webp",
-      );
-      await unlink(originalFilePath);
-      await unlink(optimizedFilePath);
-    } catch (error) {
-      console.log(error);
+    const image = req.file;
+    if (!image) {
+      return next(createError("No file uploaded", 400, errorCode.invalid));
     }
-  }
-  const userData = {
-    image: req.file?.originalname,
-  };
-  await updateUser(user?.id!, userData);
 
-  res.status(200).json({
-    message: "Profile picture optimized and uploaded successfully",
-    image: splitFileName + ".webp",
-    jobId: job.id,
-  });
+    const user = await getUserbyId(userId!);
+    checkUserIfNotExist(user);
+    checkUploadFile(image);
+
+    const splitFileName = req.file?.filename.split(".")[0];
+    const optimizedFileName = `${splitFileName}.webp`;
+    console.log("Optimized file name:", optimizedFileName);
+
+    const job = await imageQueue.add(
+      "optimize-image",
+      {
+        filePath: req.file?.path,
+        fileName: optimizedFileName,
+        width: 200,
+        height: 200,
+        quality: 50,
+      },
+      {
+        attempts: 3,
+        backoff: {
+          type: "exponential",
+          delay: 1000,
+        },
+      },
+    );
+
+    console.log("Image optimization completed");
+
+    // Delete old avatar files
+    if (user?.avatar) {
+      try {
+        const originalFilePath = path.join(
+          __dirname,
+          "../../../",
+          "uploads/images",
+          user!.avatar!.split(".")[0] + ".*",
+        );
+        const optimizedFilePath = path.join(
+          __dirname,
+          "../../../",
+          "uploads/optimized",
+          user!.avatar,
+        );
+        await unlink(originalFilePath).catch(() => {});
+        await unlink(optimizedFilePath).catch(() => {});
+      } catch (error) {
+        console.log("Error deleting old files:", error);
+      }
+    }
+
+    // Update user with new avatar
+    const updatedUser = await updateUser(userId!, {
+      avatar: optimizedFileName,
+    });
+    console.log("User updated with new avatar:", updatedUser);
+
+    res.status(200).json({
+      message: "Profile picture optimized and uploaded successfully",
+      image: optimizedFileName,
+      jobId: job.id,
+    });
+  } catch (error) {
+    console.error("Upload error:", error);
+    next(error);
+  }
 };
 
 interface CustomRequest extends Request {

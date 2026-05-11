@@ -346,7 +346,6 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
 
         set({ nodes: updatedNodes, edges: updatedEdges });
 
-        // ⭐ ONE HISTORY SNAPSHOT
         get().pushToHistory(updatedNodes, updatedEdges);
       }
     } finally {
@@ -559,7 +558,7 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
         })),
       };
 
-      console.log("Saving mind map with data:", saveData); // Add this for debugging
+      console.log("Saving mind map with data:", saveData);
 
       let response;
       if (mindMapId) {

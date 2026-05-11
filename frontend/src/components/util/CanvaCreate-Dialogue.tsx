@@ -1,4 +1,3 @@
-// components/util/create-canvas-dialog.tsx
 import {
   AlertDialog,
   AlertDialogAction,

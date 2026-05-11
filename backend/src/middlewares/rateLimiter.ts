@@ -5,5 +5,4 @@ export const limiter = rateLimit({
   limit: 100, // limit each IP to 100 requests per windowMs (here, per 15 minutes)
   standardHeaders: "draft-7", // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit`
   legacyHeaders: false, // disable the `X-RateLimit-*` headers
-  // store: ... , // Redis, Memcached, etc. See below.
 });

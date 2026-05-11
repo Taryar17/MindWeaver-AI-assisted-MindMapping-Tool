@@ -1,4 +1,3 @@
-// api/password.ts
 import api from "./index";
 
 export interface ForgotPasswordData {

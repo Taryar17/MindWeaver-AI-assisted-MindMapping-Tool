@@ -1,4 +1,3 @@
-// import { authApi } from "../../api";
 import api, { authApi } from "@/api";
 import { AxiosError } from "axios";
 import { redirect, type ActionFunctionArgs } from "react-router-dom";

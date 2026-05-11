@@ -1,4 +1,3 @@
-// components/profile/ChangePasswordModal.tsx
 import { useState } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
 import { passwordApi } from "@/api/password";

@@ -1,4 +1,3 @@
-// pages/api/DraftPage.tsx
 import { useLoaderData, useRevalidator } from "react-router-dom";
 import { useState } from "react";
 import DraftCard from "@/components/home/DraftCard";

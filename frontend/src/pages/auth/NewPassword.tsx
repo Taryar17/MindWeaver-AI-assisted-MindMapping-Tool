@@ -1,4 +1,3 @@
-// pages/auth/NewPasswordPage.tsx
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Icons } from "@/components/icons";

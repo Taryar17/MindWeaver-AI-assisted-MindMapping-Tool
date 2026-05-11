@@ -1,5 +1,3 @@
-// components/home/DraftCard.tsx
-
 import { formatDistanceToNow } from "date-fns";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -43,11 +41,36 @@ function DraftCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Generate a simple preview based on node count
-  const previewColor = `hsl(${(nodeCount * 30) % 360}, 70%, 60%)`;
+  // Generate a consistent color based on the title
+  const getColorFromTitle = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash % 360);
+    return `hsl(${hue}, 70%, 55%)`;
+  };
+
+  const previewColor = getColorFromTitle(title);
+
+  // Get initials/abbreviation from title
+  const getAbbreviation = (str: string) => {
+    if (!str || str === "untitled project") return "MW";
+
+    // Split by spaces and take first letter of each word (max 3 letters)
+    const words = str.trim().split(/\s+/);
+    const abbreviation = words
+      .slice(0, 3)
+      .map((word) => word.charAt(0).toUpperCase())
+      .join("");
+
+    return abbreviation || "MW";
+  };
+
+  const abbreviation = getAbbreviation(title);
 
   const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering card selection
+    e.stopPropagation();
     setShowDeleteDialog(true);
   };
 
@@ -101,31 +124,21 @@ function DraftCard({
         )}
 
         <div className="p-4">
-          {/* Preview area */}
+          {/* Preview area with abbreviation */}
           <div
-            className="h-32 rounded-md mb-4 relative overflow-hidden"
+            className="h-32 rounded-md mb-4 relative overflow-hidden flex items-center justify-center"
             style={{
-              background: `linear-gradient(135deg, ${previewColor} 0%, ${previewColor}99 100%)`,
+              background: `linear-gradient(135deg, ${previewColor} 0%, ${previewColor}CC 100%)`,
             }}
           >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex gap-1 flex-wrap justify-center p-2">
-                {Array.from({ length: Math.min(nodeCount, 9) }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="w-2 h-2 rounded-full bg-white/80"
-                    style={{
-                      transform: `scale(${0.5 + (i % 3) * 0.3})`,
-                    }}
-                  />
-                ))}
-              </div>
+            <span className="text-3xl font-bold text-white drop-shadow-md">
+              {abbreviation}
+            </span>
+
+            {/* Show node count badge */}
+            <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded-full">
+              {nodeCount} {nodeCount === 1 ? "node" : "nodes"}
             </div>
-            {nodeCount > 9 && (
-              <div className="absolute bottom-1 right-1 text-xs text-white/70">
-                +{nodeCount - 9}
-              </div>
-            )}
           </div>
 
           <p className="text-sm font-medium text-card-foreground truncate">

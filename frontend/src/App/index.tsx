@@ -29,8 +29,6 @@ import { Move, Plus } from "lucide-react";
 import { nanoid } from "nanoid/non-secure";
 import { AILoadingIndicator } from "@/components/util/AI-Loading-Indicator";
 import { toPng, toJpeg, toSvg } from "html-to-image";
-import { getNodesBounds, getViewportForBounds } from "reactflow";
-import * as htmlToImage from "html-to-image";
 
 const selector = (state: RFState) => ({
   nodes: state.nodes,

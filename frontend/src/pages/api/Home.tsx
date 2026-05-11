@@ -135,7 +135,7 @@ function HomePage() {
 
 export default HomePage;
 
-/* ---------- COMPONENTS ---------- */
+/* COMPONENTS  */
 
 function FeatureCard({
   icon,

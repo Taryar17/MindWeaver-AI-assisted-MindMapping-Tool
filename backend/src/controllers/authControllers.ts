@@ -12,7 +12,6 @@ import { createError } from "../utils/error";
 import { prisma } from "../lib/prisma";
 import { sendEmail } from "../utils/sendEmail";
 
-// 09778661265
 export const register = [
   body("email", "Invalid Email").trim().notEmpty().isEmail(),
   body("password")

@@ -16,7 +16,7 @@ const fileStorage = multer.diskStorage({
 const fileFilter = (
   req: Request,
   file: Express.Multer.File,
-  cb: FileFilterCallback
+  cb: FileFilterCallback,
 ) => {
   if (
     file.mimetype === "image/png" ||
@@ -33,7 +33,7 @@ const fileFilter = (
 const upload = multer({
   storage: fileStorage,
   fileFilter,
-  limits: { fileSize: 1024 * 1024 * 10 }, // Testing purpose 10MB
+  limits: { fileSize: 1024 * 1024 * 10 }, // 10MB
 });
 
 export const uploadMemory = multer({

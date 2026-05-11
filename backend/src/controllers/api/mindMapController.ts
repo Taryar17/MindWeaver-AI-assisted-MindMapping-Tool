@@ -1,4 +1,3 @@
-// backend/controllers/mindmapController.ts
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/error";
@@ -47,7 +46,7 @@ export const saveMindMap = async (
             create: nodes.map((node: any) => ({
               id: node.id,
               label: node.data.label,
-              type: node.data.nodeType || node.data.type || "DEFAULT", // Handle both formats
+              type: node.data.nodeType || node.data.type || "DEFAULT",
               posX: node.position.x,
               posY: node.position.y,
               color: node.data.color,
@@ -171,7 +170,7 @@ export const getMindMap = async (
           label: node.label,
           color: node.color || "#ffffff",
           shape: node.shape || "rectangle",
-          nodeType: node.type, // Send the nodeType from database
+          nodeType: node.type,
           aiGenerated: node.aiGenerated,
         },
         position: {

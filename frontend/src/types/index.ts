@@ -44,9 +44,9 @@ export interface MindMapSummary {
   };
 }
 
-// For the preview thumbnail, we can generate a simple representation
+// For the preview thumbnail
 export interface MindMapPreview extends MindMapSummary {
-  thumbnail?: string; // We could generate this from nodes data
+  thumbnail?: string;
   nodeCount: number;
   edgeCount: number;
 }

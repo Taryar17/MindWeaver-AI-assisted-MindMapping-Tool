@@ -1,4 +1,3 @@
-// backend/controllers/aiController.ts
 import { Request, Response, NextFunction } from "express";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/error";

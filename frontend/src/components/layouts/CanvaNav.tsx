@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Save, Upload, Share2, FileText } from "lucide-react";
+import { Save, Upload, FileText } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Link } from "react-router-dom";
 import { Icons } from "../icons";
@@ -80,7 +80,7 @@ function CanvaNav() {
 
   const getAvatarUrl = () => {
     if (profile?.avatar) {
-      return `${import.meta.env.VITE_API_URL}/uploads/optimized/${profile.avatar}`;
+      return `${import.meta.env.VITE_IMG_URL}/optimized/${profile.avatar}`;
     }
     return null;
   };
