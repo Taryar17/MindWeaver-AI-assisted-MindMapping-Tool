@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  FREEZE
+}
+
+model User {
+  id              Int       @id @default(autoincrement())
+  firstName       String?   @db.VarChar(55)
+  lastName        String?   @db.VarChar(55)
+  email           String?   @unique @db.VarChar(30)
+  password        String
+  role            Role      @default(USER)
+  status          Status    @default(ACTIVE)
+  lastLogin       DateTime?
+  errorLoginCount Int       @default(0) @db.SmallInt
+  randToken       String
+  avatar           String?
+  mindMaps  MindMap[]
+  exportedNote ExportedNote[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  // @@map("users")
+}
+
+enum NodeType {
+  ROOT
+  DEFAULT
+  SUMMARY
+}
+
+model MindMap {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+
+  ownerId     Int
+  owner       User     @relation(fields: [ownerId], references: [id])
+
+  nodes       Node[] 
+  edges       Edge[]  
+  exportedNote ExportedNote[]
+
+  isPublic    Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Node {
+  id        String   @id @default(uuid())
+
+  mindMapId String
+  mindMap   MindMap  @relation(fields: [mindMapId], references: [id], onDelete: Cascade)
+
+  label     String
+  content   String?
+  type      NodeType @default(DEFAULT)
+
+  posX      Float
+  posY      Float
+
+  parentId  String?
+  parent    Node?     @relation("NodeHierarchy", fields: [parentId], references: [id])
+  children  Node[]    @relation("NodeHierarchy")
+
+  color     String?
+  shape      String?
+
+  aiGenerated Boolean @default(false)
+
+  aiHistory AIHistory[]
+
+  outgoingEdges Edge[] @relation("EdgeSource")
+  incomingEdges Edge[] @relation("EdgeTarget")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Edge {
+  id        String  @id @default(uuid())
+
+  mindMapId String
+  mindMap   MindMap @relation(fields: [mindMapId], references: [id],onDelete: Cascade)
+
+  sourceId  String
+  targetId  String
+
+  source    Node @relation("EdgeSource", fields: [sourceId], references: [id])
+  target    Node @relation("EdgeTarget", fields: [targetId], references: [id])
+
+  label     String?
+
+  createdAt DateTime @default(now())
+}
+
+model AIHistory {
+  id        String   @id @default(uuid())
+
+  nodeId    String
+  node      Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  prompt    String
+  response  String
+
+  model     String
+
+  createdAt DateTime @default(now())
+}
+
+model ExportedNote {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @db.Text
+  format    String   @default("markdown")
+  
+  mindMapId String
+  mindMap   MindMap  @relation(fields: [mindMapId], references: [id])
+  
+  ownerId   Int
+  owner     User     @relation(fields: [ownerId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
