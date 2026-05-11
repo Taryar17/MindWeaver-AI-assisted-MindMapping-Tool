@@ -1,4 +1,3 @@
-// App/MindMapNode.tsx
 import { Handle, type NodeProps, Position } from "@xyflow/react";
 import useStore from "../store";
 import { useEffect, useRef, useState } from "react";
@@ -38,12 +37,24 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
 
   const textColor = getTextColor(data.color);
 
+  // Stop drag events from propagating when interacting with input
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const stopDragIfEditing = (e: React.MouseEvent) => {
+    if (isEditing) {
+      e.stopPropagation();
+    }
+  };
+
   // For summary nodes, use textarea for multiline content
   if (data.nodeType === "SUMMARY") {
     return (
       <>
         <div
           onDoubleClick={() => setIsEditing(true)}
+          onMouseDownCapture={stopDragIfEditing}
           className={`inputWrapper cursor-move ${isSelected ? "selected" : ""}`}
           style={{
             backgroundColor: data.color,
@@ -83,15 +94,17 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
                 lineHeight: "1.6",
               }}
               autoFocus
+              onMouseDown={handleMouseDown}
             />
           ) : (
             <p
-              className="whitespace-pre-wrap wrap-break-words"
+              className="whitespace-pre-wrap break-words"
               style={{
                 color: textColor,
                 fontSize: "14px",
                 lineHeight: "1.6",
                 margin: 0,
+                cursor: "grab",
               }}
             >
               {data.label}
@@ -110,7 +123,7 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
         <Handle
           type="target"
           position={Position.Top}
-          className="w-3! h-3! bg-primary! border-2! border-background! hover:scale-125! transition-transform"
+          className="!w-3 !h-3 !bg-primary !border-2 !border-background hover:!scale-125 transition-transform"
         />
       </>
     );
@@ -120,7 +133,10 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
   return (
     <>
       <div
-        onDoubleClick={() => setIsEditing(true)}
+        onDoubleClick={() => {
+          if (isSelected) setIsEditing(true);
+        }}
+        onMouseDownCapture={stopDragIfEditing}
         className={`inputWrapper cursor-move ${isSelected ? "selected" : ""}`}
         style={{
           backgroundColor: data.color,
@@ -140,26 +156,39 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
           transition: "all 0.2s ease",
         }}
       >
-        <input
-          ref={inputRef}
-          value={data.label}
-          readOnly={!isEditing}
-          onBlur={() => setIsEditing(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              setIsEditing(false);
-            }
-          }}
-          onChange={(evt) => updateNodeLabel(id, evt.target.value)}
-          className="bg-transparent border-none outline-none text-center font-semibold"
-          style={{
-            color: textColor,
-            width: "auto",
-            minWidth: "60px",
-          }}
-        />
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            value={data.label}
+            autoFocus
+            onBlur={() => setIsEditing(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                setIsEditing(false);
+              }
+            }}
+            onChange={(evt) => updateNodeLabel(id, evt.target.value)}
+            className="bg-transparent border-none outline-none text-center font-semibold"
+            style={{
+              color: textColor,
+              width: "auto",
+              minWidth: "60px",
+            }}
+            onMouseDown={handleMouseDown}
+          />
+        ) : (
+          <span
+            style={{
+              color: textColor,
+              fontWeight: 600,
+              textAlign: "center",
+              userSelect: "none",
+            }}
+          >
+            {data.label}
+          </span>
+        )}
 
-        {/* AI-generated badge for regular nodes */}
         {data.aiGenerated && (
           <div className="absolute -top-2 -right-2">
             <Sparkles size={12} className="text-primary" />
@@ -170,13 +199,13 @@ function MindMapNodes({ id, data }: NodeProps<MindMapNode>) {
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3! h-3! bg-primary! border-2! border-background! hover:scale-125! transition-transform"
+        className="!w-3 !h-3 !bg-primary !border-2 !border-background"
       />
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3! h-3! bg-primary! border-2! border-background! hover:scale-125! transition-transform"
+        className="!w-3 !h-3 !bg-primary !border-2 !border-background"
       />
     </>
   );

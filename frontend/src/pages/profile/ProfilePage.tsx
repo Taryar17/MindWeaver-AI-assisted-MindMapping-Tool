@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "@/store/userStore";
 import { toast } from "sonner";
+import { ChangePasswordModal } from "@/components/util/ChangePasswordModal";
 
 function ProfilePage() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ function ProfilePage() {
 
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -182,7 +184,10 @@ function ProfilePage() {
         </section>
 
         {/* Change Password Button */}
-        <button className="w-1/2 bg-muted hover:bg-muted/80 text-foreground py-2 rounded-md transition-colors">
+        <button
+          onClick={() => setShowPasswordModal(true)}
+          className="w-1/2 bg-muted hover:bg-muted/80 text-foreground py-2 rounded-md transition-colors"
+        >
           Change Password
         </button>
 
@@ -216,6 +221,12 @@ function ProfilePage() {
           {isLoading ? "Saving..." : "Save Changes"}
         </button>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </div>
   );
 }

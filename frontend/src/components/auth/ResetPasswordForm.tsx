@@ -1,115 +1,118 @@
-import {
-  Link,
-  useActionData,
-  useNavigation,
-  useSubmit,
-} from "react-router-dom";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Icons } from "@/components/icons";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { passwordApi } from "@/api/password";
+import { toast } from "sonner";
 
-import { Icons } from "../../components/icons";
-import { cn } from "../../lib/utils";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "../../components/ui/form";
+export default function ResetPasswordPage() {
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const navigate = useNavigate();
 
-const FormSchema = z.object({
-  email: z.email("Invalid Email"),
-});
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-export function ResetPasswordForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  const submit = useSubmit();
-  const navigation = useNavigation();
-  const actionData = useActionData() as { error?: string } | undefined;
-
-  const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: {
-      email: "",
-    },
-  });
-
-  function onSubmit(values: z.infer<typeof FormSchema>) {
-    submit(values, { method: "post", action: "." });
-  }
+    try {
+      await passwordApi.forgotPassword({ email });
+      setIsSent(true);
+      toast.success("Reset link sent to your email!");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to send reset link");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2">
-          <Link to="#" className="flex flex-col items-center gap-2 font-medium">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md">
-              <Icons.logo className="mr-2 h-6 w-6" aria-hidden="true" />
-            </div>
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2">
+            <Icons.logo className="h-8 w-8 text-primary" />
+            <span className="text-xl font-semibold text-foreground">
+              MindWeaver
+            </span>
           </Link>
-          <h1 className="text-xl font-bold">Reset Password</h1>
-          <div className="text-center text-sm">
-            Remember your password?{" "}
-            <a href="/login" className="underline underline-offset-4">
-              Sign In
-            </a>
-          </div>
         </div>
-        <div className="flex flex-col gap-6">
-          <div className="grid gap-2">
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-                autoComplete="off"
-              >
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="0977**********"
-                          required
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {actionData && (
-                  <p className="text-xs text-red-400">{actionData?.error}</p>
-                )}
-                <div className="grid gap-4">
-                  <Button
-                    type="submit"
-                    className="mt-2 w-full"
-                    disabled={navigation.state === "submitting"}
-                  >
-                    {navigation.state === "submitting"
-                      ? "Submitting..."
-                      : "Reset"}
-                  </Button>
+
+        <div className="bg-card border border-border rounded-lg shadow-lg p-8">
+          {!isSent ? (
+            <>
+              <h1 className="text-2xl font-semibold text-foreground text-center mb-2">
+                Reset Password
+              </h1>
+              <p className="text-muted-foreground text-center text-sm mb-6">
+                Enter your email address and we'll send you a link to reset your
+                password.
+              </p>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1">
+                    Email Address
+                  </label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    className="bg-background"
+                  />
                 </div>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-primary hover:bg-primary/90"
+                >
+                  {isLoading ? "Sending..." : "Send Reset Link"}
+                </Button>
+
+                <p className="text-center text-sm text-muted-foreground">
+                  Remember your password?{" "}
+                  <Link to="/login" className="text-primary hover:underline">
+                    Back to Login
+                  </Link>
+                </p>
               </form>
-            </Form>
-          </div>
+            </>
+          ) : (
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  className="w-8 h-8 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">
+                Check Your Email
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                We've sent a password reset link to <strong>{email}</strong>
+              </p>
+              <Button
+                onClick={() => navigate("/login")}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Return to Login
+              </Button>
+            </div>
+          )}
         </div>
-      </div>
-      <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
-        By clicking continue, you agree to our{" "}
-        <Link to="#">Terms of Service</Link>
-        and <Link to="#">Privacy Policy</Link>.
       </div>
     </div>
   );

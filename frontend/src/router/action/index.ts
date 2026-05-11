@@ -99,19 +99,31 @@ export const newPasswordAction = async ({
   params,
 }: ActionFunctionArgs) => {
   const formData = await request.formData();
-
   const password = formData.get("password");
 
+  // Make sure to use the correct API endpoint
   try {
-    await authApi.post("reset-password", {
-      token: params.token,
-      password,
-    });
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/reset-password`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: params.token,
+          password,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      return { error: error.message || "Failed to reset password" };
+    }
 
     return redirect("/login");
   } catch (error) {
-    if (error instanceof AxiosError) {
-      return { error: error.response?.data?.message };
-    }
+    return { error };
   }
 };

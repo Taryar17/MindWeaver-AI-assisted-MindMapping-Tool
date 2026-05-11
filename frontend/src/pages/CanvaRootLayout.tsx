@@ -1,4 +1,3 @@
-// pages/CanvaRootLayout.tsx
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useBlocker } from "react-router-dom";

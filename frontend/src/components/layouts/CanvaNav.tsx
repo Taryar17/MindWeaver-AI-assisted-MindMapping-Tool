@@ -174,25 +174,19 @@ function CanvaNav() {
           Generate Notes
         </button>
         <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-2 py-1.5 rounded-md transition-colors text-sm disabled:opacity-50 whitespace-nowrap"
-        >
-          <Save size={14} className={isSaving ? "animate-pulse" : ""} />
-          {isSaving ? "Saving..." : "Save"}
-        </button>
-
-        <button
           onClick={handleExport}
           className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground px-2 py-1.5 rounded-md transition-colors text-sm whitespace-nowrap"
         >
           <Upload size={14} />
           Export
         </button>
-
-        <button className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-2 py-1.5 rounded-md transition-colors text-sm whitespace-nowrap">
-          <Share2 size={14} />
-          Share
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-2 py-1.5 rounded-md transition-colors text-sm whitespace-nowrap"
+        >
+          <Save size={14} className={isSaving ? "animate-pulse" : ""} />
+          {isSaving ? "Saving..." : "Save"}
         </button>
         <div className="h-6 w-px bg-border" />
       </div>

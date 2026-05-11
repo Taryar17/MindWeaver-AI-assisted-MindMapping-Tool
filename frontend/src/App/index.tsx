@@ -118,18 +118,12 @@ export function Flow() {
       ) as HTMLElement;
 
       if (!reactFlowEl) return;
-
-      // Add temporary class for export styling
       reactFlowEl.classList.add("exporting");
 
-      /* ===============================
-       1. Save current viewport
-    =============================== */
+      /*Save current viewport*/
       const currentViewport = getViewport();
 
-      /* ===============================
-       2. Fit entire diagram
-    =============================== */
+      /*Fit entire diagram*/
       await fitView({
         padding: 0.2,
         duration: 300,
@@ -137,9 +131,7 @@ export function Flow() {
 
       await new Promise((r) => setTimeout(r, 350));
 
-      /* ===============================
-       3. Fix edge visibility - force all SVG paths to have explicit colors
-    =============================== */
+      /* Fix edge visibility - force all SVG paths to have explicit colors */
       const allEdges = reactFlowEl.querySelectorAll(".react-flow__edge-path");
       const originalStrokes: string[] = [];
 
@@ -154,16 +146,13 @@ export function Flow() {
         path.setAttribute("stroke-width", isSelected ? "3" : "1.5");
       });
 
-      /* ===============================
-       4. Also ensure all nodes have proper styling
-    =============================== */
+      /*Also ensure all nodes have proper styling*/
       const allNodes = reactFlowEl.querySelectorAll(".react-flow__node");
       const originalBackgrounds: string[] = [];
 
       allNodes.forEach((node, index) => {
         const div = node as HTMLElement;
         originalBackgrounds[index] = div.style.backgroundColor;
-        // Ensure background color is explicit
         if (
           div.style.backgroundColor === "" ||
           div.style.backgroundColor === "var(--card)"
@@ -175,9 +164,7 @@ export function Flow() {
         }
       });
 
-      /* ===============================
-       5. Export with proper background
-    =============================== */
+      /*Export with proper background*/
       const options = {
         backgroundColor:
           getComputedStyle(document.body)
@@ -225,14 +212,10 @@ export function Flow() {
         reactFlowEl.classList.remove("exporting");
       }
 
-      /* ===============================
-       6. Restore viewport
-    =============================== */
+      /*Restore viewport*/
       await setViewport(currentViewport, { duration: 0 });
 
-      /* ===============================
-       7. Download
-    =============================== */
+      /* Download*/
       const link = document.createElement("a");
       link.download = `${filename}.${format}`;
       link.href = dataUrl;
