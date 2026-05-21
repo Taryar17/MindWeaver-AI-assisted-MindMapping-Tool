@@ -480,8 +480,8 @@ export function Flow() {
                 <span>Drag nodes to move</span>
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-primary font-bold">Shift</span>
-                <span>+ Click to connect</span>
+                <span className="text-primary">Drag from edge</span>
+                <span>to connect nodes</span>
               </li>
               <li className="flex items-center gap-2">
                 <span className="text-primary">Double-click</span>

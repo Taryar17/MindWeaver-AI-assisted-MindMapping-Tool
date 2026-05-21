@@ -310,10 +310,14 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
       if (response.result && Array.isArray(response.result)) {
         const ideas = response.result as string[];
 
-        const newNodes: any = [];
-        const newEdges: any = [];
+        const newNodes: AINode[] = [];
+        const newEdges: AIEdge[] = [];
 
         ideas.forEach((idea, index) => {
+          const spacingY = 140;
+          const startY =
+            currentNode.position.y - ((ideas.length - 1) * spacingY) / 2;
+
           const node = {
             id: nanoid(),
             type: "mindmap",
@@ -324,8 +328,8 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
               aiGenerated: true,
             },
             position: {
-              x: currentNode.position.x + 250 + index * 30,
-              y: currentNode.position.y + 150 + index * 20,
+              x: currentNode.position.x + 350,
+              y: startY + index * spacingY,
             },
             parentId: currentNode.id,
           };
@@ -398,6 +402,10 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
         const newEdges: any = [];
 
         concepts.forEach((concept, index) => {
+          const spacingX = 220;
+          const startX =
+            currentNode.position.x - ((concepts.length - 1) * spacingX) / 2;
+
           const node = {
             id: nanoid(),
             type: "mindmap",
@@ -408,8 +416,8 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
               aiGenerated: true,
             },
             position: {
-              x: currentNode.position.x + 300 + index * 40,
-              y: currentNode.position.y - 120,
+              x: startX + index * spacingX,
+              y: currentNode.position.y - 60,
             },
             parentId: currentNode.parentId,
           };

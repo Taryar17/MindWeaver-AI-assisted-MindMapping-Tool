@@ -50,4 +50,5 @@ export interface MindMapPreview extends MindMapSummary {
   nodeCount: number;
   edgeCount: number;
 }
+
 export type MainNavItem = NavItemWithChildren;
