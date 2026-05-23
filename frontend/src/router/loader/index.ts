@@ -1,6 +1,7 @@
 import { redirect } from "react-router-dom";
 import { authApi } from "../../api";
 import { mindmapApi } from "@/api/mindmap";
+import { notesApi } from "@/api/notes";
 
 export const loginLoader = async () => {
   try {
@@ -49,5 +50,15 @@ export const currentWorkLoader = async () => {
   } catch (error) {
     console.error("Failed to load current work:", error);
     return { latestMindMap: null };
+  }
+};
+
+export const exportedNotesLoader = async () => {
+  try {
+    const notes = await notesApi.getUserNotes();
+    return { notes };
+  } catch (error) {
+    console.error("Failed to load exported notes:", error);
+    return { notes: [] };
   }
 };

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { notesApi, type ExportedNote } from "@/api/notes";
+import { useState, useRef } from "react";
+import { useLoaderData } from "react-router-dom";
+import { type ExportedNote } from "@/api/notes";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -14,30 +15,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Download, Trash2, Eye, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { notesApi } from "@/api/notes";
 
 function ExportedNotesPage() {
-  const [notes, setNotes] = useState<ExportedNote[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { notes: initialNotes } = useLoaderData() as { notes: ExportedNote[] };
+  const [notes, setNotes] = useState<ExportedNote[]>(initialNotes);
   const [selectedNote, setSelectedNote] = useState<ExportedNote | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-
-  useEffect(() => {
-    loadNotes();
-  }, []);
-
-  const loadNotes = async () => {
-    try {
-      const data = await notesApi.getUserNotes();
-      setNotes(data);
-    } catch (error) {
-      console.error("Failed to load notes:", error);
-      toast.error("Failed to load notes");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showFormatMenu, setShowFormatMenu] = useState<string | null>(null);
+  const [downloadingNote, setDownloadingNote] = useState<string | null>(null);
+  const formatMenuRef = useRef<HTMLDivElement>(null);
 
   const handleDelete = async (id: string) => {
     try {
@@ -53,16 +42,68 @@ function ExportedNotesPage() {
     }
   };
 
-  const handleDownload = (note: ExportedNote) => {
-    const blob = new Blob([note.content], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${note.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // Convert markdown to plain text
+  const convertToPlainText = (markdown: string): string => {
+    return markdown
+      .replace(/^#+\s+/gm, "")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/__([^_]+)__/g, "$1")
+      .replace(/_([^_]+)_/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/`[^`]+`/g, "")
+      .replace(/^---+$/gm, "")
+      .replace(/\n\s*\n\s*\n/g, "\n\n")
+      .trim();
+  };
+
+  const handleDownload = async (note: ExportedNote, format: "md" | "txt") => {
+    setDownloadingNote(note.id);
+    try {
+      const fullNote = await notesApi.getNote(note.id);
+
+      let content: string;
+      let mimeType: string;
+      let fileExtension: string;
+
+      if (format === "txt") {
+        content = convertToPlainText(fullNote.content);
+        mimeType = "text/plain";
+        fileExtension = "txt";
+      } else {
+        content = fullNote.content;
+        mimeType = "text/markdown";
+        fileExtension = "md";
+      }
+
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${note.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.${fileExtension}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setShowFormatMenu(null);
+    } catch (error) {
+      console.error("Failed to download note:", error);
+      toast.error("Failed to download note");
+    } finally {
+      setDownloadingNote(null);
+    }
+  };
+
+  const handlePreview = async (note: ExportedNote) => {
+    try {
+      const fullNote = await notesApi.getNote(note.id);
+      setSelectedNote(fullNote);
+      setShowPreview(true);
+    } catch (error) {
+      console.error("Failed to load note preview:", error);
+      toast.error("Failed to load note preview");
+    }
   };
 
   const formatFileSize = (content: string) => {
@@ -71,14 +112,6 @@ function ExportedNotesPage() {
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -94,7 +127,7 @@ function ExportedNotesPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card/50 backdrop-blur-xl shadow-xl overflow-hidden">
+        <div className="rounded-xl border border-border bg-card/50 backdrop-blur-xl shadow-xl overflow-visible">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-muted-foreground">
               <tr>
@@ -133,22 +166,51 @@ function ExportedNotesPage() {
                   <td className="p-4">
                     <div className="flex gap-3">
                       <button
-                        onClick={() => {
-                          setSelectedNote(note);
-                          setShowPreview(true);
-                        }}
+                        onClick={() => handlePreview(note)}
                         className="text-muted-foreground hover:text-primary transition-colors"
                         title="Preview"
+                        disabled={downloadingNote === note.id}
                       >
                         <Eye className="size-5" />
                       </button>
-                      <button
-                        onClick={() => handleDownload(note)}
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                        title="Download"
-                      >
-                        <Download className="size-5" />
-                      </button>
+
+                      <div className="relative" ref={formatMenuRef}>
+                        <button
+                          onClick={() =>
+                            setShowFormatMenu(
+                              showFormatMenu === note.id ? null : note.id,
+                            )
+                          }
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          title="Download"
+                          disabled={downloadingNote === note.id}
+                        >
+                          {downloadingNote === note.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                          ) : (
+                            <Download className="size-5" />
+                          )}
+                        </button>
+                        {showFormatMenu === note.id && (
+                          <div className="absolute top-full left-0 mt-1 w-36 bg-card border border-border rounded-md shadow-lg z-50 overflow-visible">
+                            <button
+                              onClick={() => handleDownload(note, "md")}
+                              className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                              disabled={downloadingNote === note.id}
+                            >
+                              Markdown (.md)
+                            </button>
+                            <button
+                              onClick={() => handleDownload(note, "txt")}
+                              className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                              disabled={downloadingNote === note.id}
+                            >
+                              Plain Text (.txt)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       <button
                         onClick={() => {
                           setNoteToDelete(note.id);
@@ -196,13 +258,13 @@ function ExportedNotesPage() {
 
       {/* Preview Modal */}
       <AlertDialog open={showPreview} onOpenChange={setShowPreview}>
-        <AlertDialogContent className="bg-card border-border max-w-4xl max-h-[80vh] overflow-auto">
+        <AlertDialogContent className="bg-card border-border max-w-4xl max-h-[85vh] overflow-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">
+            <AlertDialogTitle className="text-foreground text-xl">
               {selectedNote?.title}
             </AlertDialogTitle>
           </AlertDialogHeader>
-          <div className="prose prose-sm dark:prose-invert max-w-none p-4">
+          <div className="prose prose-base dark:prose-invert max-w-none p-6">
             <ReactMarkdown>{selectedNote?.content || ""}</ReactMarkdown>
           </div>
           <AlertDialogFooter>

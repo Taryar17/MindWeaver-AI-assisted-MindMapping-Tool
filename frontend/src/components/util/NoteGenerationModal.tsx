@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, Loader2, Download, X } from "lucide-react";
 import { notesApi } from "@/api/notes";
 import { toast } from "sonner";
@@ -23,6 +23,22 @@ export function NoteGenerationModal({
   const [generatedNote, setGeneratedNote] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
   const [step, setStep] = useState<"generate" | "preview">("generate");
+  const [showFormatMenu, setShowFormatMenu] = useState(false);
+  const formatMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close format menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        formatMenuRef.current &&
+        !formatMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowFormatMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -59,18 +75,56 @@ export function NoteGenerationModal({
     }
   };
 
-  const handleDownload = () => {
+  // Convert markdown to plain text (remove markdown formatting)
+  const convertToPlainText = (markdown: string): string => {
+    return (
+      markdown
+        // Remove headings
+        .replace(/^#+\s+/gm, "")
+        // Remove bold/italic
+        .replace(/\*\*([^*]+)\*\*/g, "$1")
+        .replace(/\*([^*]+)\*/g, "$1")
+        .replace(/__([^_]+)__/g, "$1")
+        .replace(/_([^_]+)_/g, "$1")
+        // Remove links but keep text
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        // Remove code blocks
+        .replace(/`[^`]+`/g, "")
+        // Remove horizontal rules
+        .replace(/^---+$/gm, "")
+        // Clean up extra newlines
+        .replace(/\n\s*\n\s*\n/g, "\n\n")
+        .trim()
+    );
+  };
+
+  const handleDownload = (format: "md" | "txt") => {
     if (!generatedNote) return;
 
-    const blob = new Blob([generatedNote], { type: "text/markdown" });
+    let content: string;
+    let mimeType: string;
+    let fileExtension: string;
+
+    if (format === "txt") {
+      content = convertToPlainText(generatedNote);
+      mimeType = "text/plain";
+      fileExtension = "txt";
+    } else {
+      content = generatedNote;
+      mimeType = "text/markdown";
+      fileExtension = "md";
+    }
+
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${noteTitle.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.md`;
+    a.download = `${noteTitle.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.${fileExtension}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setShowFormatMenu(false);
   };
 
   if (!isOpen) return null;
@@ -116,8 +170,20 @@ export function NoteGenerationModal({
                   <li>Detailed paragraphs for each node</li>
                   <li>Connections between different branches</li>
                   <li>Conclusion summarizing key points</li>
+                  <li>
+                    <strong>Reflective Insights</strong> - Analysis of your
+                    thinking patterns, cognitive approaches, and suggestions for
+                    deeper understanding
+                  </li>
                   <li>Formatted in Markdown with proper headings</li>
                 </ul>
+              </div>
+              <div className="bg-primary/5 p-3 rounded-lg border border-primary/20">
+                <p className="text-xs text-muted-foreground">
+                  The "Reflective Insights" section analyzes how you organized
+                  information, identifies potential knowledge gaps, and suggests
+                  mental frameworks to enhance your understanding of the topic.
+                </p>
               </div>
             </div>
           ) : (
@@ -174,13 +240,32 @@ export function NoteGenerationModal({
             </button>
           ) : (
             <div className="flex gap-2">
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md text-sm"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </button>
+              {/* Download button with format dropdown */}
+              <div className="relative" ref={formatMenuRef}>
+                <button
+                  onClick={() => setShowFormatMenu(!showFormatMenu)}
+                  className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-md text-sm"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </button>
+                {showFormatMenu && (
+                  <div className="absolute bottom-full right-0 mb-1 w-32 bg-card border border-border rounded-md shadow-lg z-50 overflow-hidden">
+                    <button
+                      onClick={() => handleDownload("md")}
+                      className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      Markdown (.md)
+                    </button>
+                    <button
+                      onClick={() => handleDownload("txt")}
+                      className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      Plain Text (.txt)
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={handleSave}
                 className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md text-sm"

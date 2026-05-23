@@ -63,7 +63,13 @@ Task: Generate a comprehensive, well-structured note based on this mind map. The
 2. Organize content hierarchically following the mind map structure
 3. Expand each node into detailed paragraphs with explanations
 4. Include relevant connections between different branches
-5. End with a conclusion summarizing the key points
+5. Include a conclusion summarizing the key points
+6. End with  "Reflective Insights" that discusses possible thought patterns, cognitive approaches, and thinking strategies the user might have employed while creating this mind map. Consider:
+   - How the user organized information (hierarchical vs. lateral thinking)
+   - Potential connections the user identified between concepts
+   - Possible knowledge gaps or areas for further exploration
+   - The user's apparent focus areas or priorities based on node depth and detail
+   - Suggested mental frameworks that could enhance understanding of this topic
 
 Format the note in Markdown with appropriate headings (H1, H2, H3) for each level.
 Make it detailed, educational, and well-structured.

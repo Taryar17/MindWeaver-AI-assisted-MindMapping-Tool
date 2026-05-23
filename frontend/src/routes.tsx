@@ -25,6 +25,7 @@ import CanvaRootLayout from "./pages/CanvaRootLayout";
 import {
   currentWorkLoader,
   draftsLoader,
+  exportedNotesLoader,
   loginLoader,
   protectedLoader,
 } from "./router/loader";
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
       {
         path: "/exported-notes",
         element: <ExportedNotesPage />,
+        loader: exportedNotesLoader,
       },
       {
         path: "/aboutus",
