@@ -97,7 +97,7 @@ export const auth = (req: CustomRequest, res: Response, next: NextFunction) => {
       refreshTokenPayload,
       process.env.REFRESH_TOKEN_SECRET!,
       {
-        expiresIn: "30d",
+        expiresIn: "15d",
       },
     );
 

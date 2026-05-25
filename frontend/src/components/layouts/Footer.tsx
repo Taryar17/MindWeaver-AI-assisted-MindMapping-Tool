@@ -65,10 +65,10 @@ function Footer() {
             © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
           </p>
           <div className="flex gap-4">
-            <Link to="/terms" className="hover:text-primary">
+            <Link to="#" className="hover:text-primary">
               Terms
             </Link>
-            <Link to="/privacy" className="hover:text-primary">
+            <Link to="#" className="hover:text-primary">
               Privacy
             </Link>
           </div>

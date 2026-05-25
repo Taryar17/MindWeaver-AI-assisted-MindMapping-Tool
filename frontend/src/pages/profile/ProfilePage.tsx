@@ -79,7 +79,7 @@ function ProfilePage() {
   const getAvatarUrl = () => {
     if (preview) return preview;
     if (profile?.avatar) {
-      return `${import.meta.env.VITE_API_URL}/uploads/optimized/${profile.avatar}`;
+      return `${import.meta.env.VITE_IMG_URL}/optimized/${profile.avatar}`;
     }
     return null;
   };

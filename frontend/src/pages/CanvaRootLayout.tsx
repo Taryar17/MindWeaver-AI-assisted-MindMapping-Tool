@@ -93,7 +93,6 @@ function CanvaRootLayout() {
           <Flow />
         </div>
       </div>
-
       <SaveConfirmationDialog
         open={showSaveDialog}
         onOpenChange={setShowSaveDialog}

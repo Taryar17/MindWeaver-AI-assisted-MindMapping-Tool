@@ -58,7 +58,7 @@ export const register = [
       refreshTokenPayload,
       process.env.REFRESH_TOKEN_SECRET!,
       {
-        expiresIn: "30d", // 30 days
+        expiresIn: "15d", // 15 days
       },
     );
 
@@ -174,7 +174,7 @@ export const login = [
       refreshTokenPayload,
       process.env.REFRESH_TOKEN_SECRET!,
       {
-        expiresIn: "30d",
+        expiresIn: "15d",
       },
     );
 
@@ -357,7 +357,7 @@ export const resetPassword = [
       refreshPayload,
       process.env.REFRESH_TOKEN_SECRET!,
       {
-        expiresIn: "30d", // "30d" in production
+        expiresIn: "15d", // "15d" in production
       },
     );
 

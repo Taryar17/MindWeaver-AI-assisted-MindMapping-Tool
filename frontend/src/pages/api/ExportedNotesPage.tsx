@@ -27,6 +27,9 @@ function ExportedNotesPage() {
   const [showFormatMenu, setShowFormatMenu] = useState<string | null>(null);
   const [downloadingNote, setDownloadingNote] = useState<string | null>(null);
   const formatMenuRef = useRef<HTMLDivElement>(null);
+  const [dropdownDirection, setDropdownDirection] = useState<{
+    [key: string]: "up" | "down";
+  }>({});
 
   const handleDelete = async (id: string) => {
     try {
@@ -176,11 +179,27 @@ function ExportedNotesPage() {
 
                       <div className="relative" ref={formatMenuRef}>
                         <button
-                          onClick={() =>
-                            setShowFormatMenu(
-                              showFormatMenu === note.id ? null : note.id,
-                            )
-                          }
+                          onClick={() => {
+                            if (showFormatMenu === note.id) {
+                              setShowFormatMenu(null);
+                            } else {
+                              // Calculate if there's enough space below
+                              const button = document.getElementById(
+                                `download-btn-${note.id}`,
+                              );
+                              if (button) {
+                                const rect = button.getBoundingClientRect();
+                                const spaceBelow =
+                                  window.innerHeight - rect.bottom;
+                                // If less than 200px below, open upward
+                                setDropdownDirection({
+                                  [note.id]: spaceBelow < 200 ? "up" : "down",
+                                });
+                              }
+                              setShowFormatMenu(note.id);
+                            }
+                          }}
+                          id={`download-btn-${note.id}`}
                           className="text-muted-foreground hover:text-primary transition-colors"
                           title="Download"
                           disabled={downloadingNote === note.id}
@@ -192,7 +211,9 @@ function ExportedNotesPage() {
                           )}
                         </button>
                         {showFormatMenu === note.id && (
-                          <div className="absolute top-full left-0 mt-1 w-36 bg-card border border-border rounded-md shadow-lg z-50 overflow-visible">
+                          <div
+                            className={`absolute ${dropdownDirection[note.id] === "up" ? "bottom-full mb-1" : "top-full mt-1"} left-0 w-36 bg-card border border-border rounded-md shadow-lg z-[100] overflow-hidden`}
+                          >
                             <button
                               onClick={() => handleDownload(note, "md")}
                               className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
