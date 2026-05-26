@@ -542,7 +542,6 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
     const { nodes, edges, mindMapId, mindMapTitle, mindMapDescription } = get();
 
     try {
-      // Validate that we have nodes to save
       if (!nodes || nodes.length === 0) {
         console.error("No nodes to save");
         return;
@@ -566,8 +565,6 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
         })),
       };
 
-      console.log("Saving mind map with data:", saveData);
-
       let response;
       if (mindMapId) {
         response = await mindmapApi.updateMindMap(mindMapId, saveData);
@@ -578,8 +575,11 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
       if (response) {
         set({ mindMapId: response.id, hasUnsavedChanges: false });
 
-        console.log("Mind map saved successfully!", response);
+        if (!mindMapId) {
+          window.history.pushState({}, "", `/canva?id=${response.id}`);
+        }
 
+        console.log("Mind map saved successfully!", response);
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
     } catch (error) {
@@ -690,11 +690,14 @@ const useStore = createWithEqualityFn<RFState>((set, get) => ({
       nodes: structuredClone(nodes),
       edges: structuredClone(edges),
     });
+    const MAX_HISTORY = 50;
+    const trimmedHistory = newHistory.slice(-MAX_HISTORY);
+    const newIndex = trimmedHistory.length - 1;
 
     set({
-      history: newHistory,
-      historyIndex: newHistory.length - 1,
-      canUndo: newHistory.length > 1,
+      history: trimmedHistory,
+      historyIndex: newIndex,
+      canUndo: newIndex > 0,
       canRedo: false,
     });
   },

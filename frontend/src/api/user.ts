@@ -45,8 +45,11 @@ export const userApi = {
     email?: string;
   }) => {
     try {
-      const response = await api.put<UserProfile>("/users/profile", data);
-      return response.data;
+      const response = await api.put<{ user: UserProfile }>(
+        "/users/profile",
+        data,
+      );
+      return response.data.user;
     } catch (error) {
       console.error("Failed to update profile:", error);
       throw error;

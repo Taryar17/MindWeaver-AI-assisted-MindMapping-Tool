@@ -1,6 +1,6 @@
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useBlocker } from "react-router-dom";
+import { useSearchParams, useBlocker, useNavigate } from "react-router-dom";
 import Flow from "@/App";
 import CanvaNav from "@/components/layouts/CanvaNav";
 import useStore from "@/App/store";
@@ -8,25 +8,36 @@ import { SaveConfirmationDialog } from "@/components/util/SaveConfirmationDialog
 
 function CanvaRootLayout() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const mindMapId = searchParams.get("id");
-  const { loadMindMap, resetToNewMindMap, saveMindMap, hasUnsavedChanges } =
-    useStore();
+  const {
+    loadMindMap,
+    resetToNewMindMap,
+    saveMindMap,
+    hasUnsavedChanges,
+    mindMapId: storeMindMapId,
+  } = useStore();
   const initialLoadRef = useRef(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<
     (() => void) | null
   >(null);
 
+  // Sync URL with store when mindMapId changes (after save)
+  useEffect(() => {
+    if (storeMindMapId && !mindMapId) {
+      navigate(`/canva?id=${storeMindMapId}`, { replace: true });
+    }
+  }, [storeMindMapId, mindMapId, navigate]);
+
   // Use blocker to intercept navigation attempts
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    // Only block if there are unsaved changes
     return (
       hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
     );
   });
 
   useEffect(() => {
-    // Prevent double execution in strict mode
     if (initialLoadRef.current) return;
     initialLoadRef.current = true;
 
@@ -44,7 +55,7 @@ function CanvaRootLayout() {
     }
   }, [blocker]);
 
-  // Handle beforeunload event (closing tab/browser)
+  // Handle beforeunload event
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
